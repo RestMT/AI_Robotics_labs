@@ -60,7 +60,7 @@ AI_Robotics_labs/
 
 1. **Клонувати репозиторій:**
    ```bash
-   git clone https://github.com/<your_username>/AI_Robotics_labs.git
+   git clone https://github.com/RestMT/AI_Robotics_labs.git
    cd AI_Robotics_labs
    ```
 
