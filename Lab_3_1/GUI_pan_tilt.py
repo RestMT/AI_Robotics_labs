@@ -34,13 +34,14 @@ class VideoControl(QWidget):
         self.pan_spinbox = self.findChild(QSpinBox, "pan_spinbox")
         self.tilt_spinbox = self.findChild(QSpinBox, "tilt_spinbox")
 
-        self.pan_spinbox.setRange(0, 180)
-        self.tilt_spinbox.setRange(0, 180)
-        self.pan_spinbox.setValue(90)
-        self.tilt_spinbox.setValue(90)
+        if self.pan_spinbox and self.tilt_spinbox:
+            self.pan_spinbox.setRange(0, 180)
+            self.tilt_spinbox.setRange(0, 180)
+            self.pan_spinbox.setValue(90)
+            self.tilt_spinbox.setValue(90)
 
-        self.pan_spinbox.valueChanged.connect(self.on_pan_changed_sync)
-        self.tilt_spinbox.valueChanged.connect(self.on_tilt_changed_sync)
+            self.pan_spinbox.valueChanged.connect(self.on_pan_changed_sync)
+            self.tilt_spinbox.valueChanged.connect(self.on_tilt_changed_sync)
 
         # Button callbacks
         self.start_stream_button.clicked.connect(lambda: self.toggle_video(True))

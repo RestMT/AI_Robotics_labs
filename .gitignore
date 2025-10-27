@@ -45,3 +45,6 @@ tmp/
 
 # === Windows shortcuts ===
 *.lnk
+
+# === GUIs ===
+*.ui

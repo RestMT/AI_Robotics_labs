@@ -5,7 +5,7 @@ import websockets
 import cv2
 import numpy as np
 from PyQt5 import uic, QtGui, QtCore
-from PyQt5.QtWidgets import QApplication, QWidget
+from PyQt5.QtWidgets import QApplication, QWidget, QSpinBox
 from qasync import QEventLoop, asyncSlot
 from ultralytics import YOLO
 
@@ -23,9 +23,9 @@ KEY_COMMANDS = {
 class VideoControl(QWidget):
     def __init__(self):
         super().__init__()
-        uic.loadUi("pan-tilt_autocontrol.ui", self)
+        uic.loadUi("pan-tilt_detection.ui", self)
 
-        # Load YOLOv8 nano model (PyTorch format)
+        # Load YOLOv8 nano model
         self.yolo_model = YOLO("yolov8n.pt")
 
         # Video + log
@@ -34,10 +34,24 @@ class VideoControl(QWidget):
         self.video_label = self.findChild(QWidget, "video_label")
         self.log_view = self.findChild(QWidget, "log_view")
 
-        # Button callbacks
+        # Servo spinboxes (added from version #1)
+        self.pan_spinbox = self.findChild(QSpinBox, "pan_spinbox")
+        self.tilt_spinbox = self.findChild(QSpinBox, "tilt_spinbox")
+
+        if self.pan_spinbox and self.tilt_spinbox:
+            self.pan_spinbox.setRange(0, 180)
+            self.tilt_spinbox.setRange(0, 180)
+            self.pan_spinbox.setValue(90)
+            self.tilt_spinbox.setValue(90)
+
+            self.pan_spinbox.valueChanged.connect(self.on_pan_changed_sync)
+            self.tilt_spinbox.valueChanged.connect(self.on_tilt_changed_sync)
+
+        # Buttons
         self.start_stream_button.clicked.connect(lambda: self.toggle_video(True))
         self.stop_stream_button.clicked.connect(lambda: self.toggle_video(False))
 
+        # States
         self.ws = None
         self.video_task = None
         self.stream_active = False
@@ -47,9 +61,11 @@ class VideoControl(QWidget):
         asyncio.ensure_future(self.connect_ws_loop())
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
 
+    # -------------------------- Utility --------------------------
     def append_log(self, msg):
         self.log_view.appendPlainText(f"[{QtCore.QTime.currentTime().toString()}] {msg}")
 
+    # -------------------------- WebSocket --------------------------
     async def connect_ws_loop(self):
         while True:
             if self.ws is None or self.ws.closed:
@@ -69,6 +85,7 @@ class VideoControl(QWidget):
             self.append_log(f"WebSocket lost: {e}")
             self.ws = None
 
+    # -------------------------- Stream control --------------------------
     @asyncSlot()
     async def toggle_video(self, enable):
         if not self.ws or self.ws.closed:
@@ -113,7 +130,7 @@ class VideoControl(QWidget):
                             img_np = np.frombuffer(jpeg, np.uint8)
                             frame = cv2.imdecode(img_np, cv2.IMREAD_COLOR)
                             if frame is not None:
-                                # Perform detection
+                                # YOLO detection
                                 frame = self.process_yolo(frame)
                                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                                 self.latest_frame = QtGui.QImage(
@@ -125,13 +142,13 @@ class VideoControl(QWidget):
                                 )
                                 self.update_frame()
         except Exception as e:
-            self.append_log(f" Video error: {e}")
+            self.append_log(f"Video error: {e}")
         finally:
             self.stream_active = False
             self.video_label.setText("Stream stopped")
 
+    # -------------------------- YOLO detection --------------------------
     def process_yolo(self, frame):
-        # Run YOLO detection (input size automatically handled)
         results = self.yolo_model(frame, imgsz=320, conf=0.5)
 
         for r in results:
@@ -141,12 +158,12 @@ class VideoControl(QWidget):
                 conf = float(box.conf[0])
                 label = f"{self.yolo_model.names[cls]} {conf:.2f}"
 
-                # Draw bounding box
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                 cv2.putText(frame, label, (x1, y1 - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         return frame
 
+    # -------------------------- Frame update --------------------------
     def update_frame(self):
         if self.latest_frame and not self.latest_frame.isNull():
             pix = QtGui.QPixmap.fromImage(self.latest_frame).scaled(
@@ -169,6 +186,7 @@ class VideoControl(QWidget):
             asyncio.ensure_future(self.ws.close())
         event.accept()
 
+    # -------------------------- Keyboard control --------------------------
     def keyPressEvent(self, event):
         if event.isAutoRepeat():
             return
@@ -195,7 +213,31 @@ class VideoControl(QWidget):
         except Exception as e:
             self.append_log(f"Send error: {e}")
 
+    # -------------------------- Servo control --------------------------
+    async def send_servo_command(self, command):
+        if not self.ws or self.ws.closed:
+            self.append_log("WebSocket not connected")
+            return
+        try:
+            await self.ws.send(command)
+            self.append_log(f"Command sent: {command}")
+        except Exception as e:
+            self.append_log(f"Send error: {e}")
 
+    def on_pan_changed_sync(self, value):
+        asyncio.ensure_future(self.on_pan_changed(value))
+
+    def on_tilt_changed_sync(self, value):
+        asyncio.ensure_future(self.on_tilt_changed(value))
+
+    async def on_pan_changed(self, value):
+        await self.send_servo_command(f"pan:{value}")
+
+    async def on_tilt_changed(self, value):
+        await self.send_servo_command(f"tilt:{180 - value}")
+
+
+# -------------------------- Main --------------------------
 def main():
     app = QApplication(sys.argv)
     loop = QEventLoop(app)
