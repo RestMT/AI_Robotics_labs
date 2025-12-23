@@ -4,8 +4,8 @@
 #include "esp_camera.h"
 
 // ======= WiFi =======
-const char* ssid = "SSID";
-const char* password = "PASSWORD";
+const char* ssid = "KPI-318";
+const char* password = "AJD2740727";
 
 // ======= MJPEG WebServer =======
 WebServer mjpegServer(80);
@@ -156,7 +156,7 @@ bool startCamera() {
   sensor_t *s = esp_camera_sensor_get();
   if (s != nullptr) {
     s->set_vflip(s, 1);  // Vertical flip
-    s->set_hmirror(s, 1);  // Horizontal flip
+    s->set_hmirror(s, 0);  // Horizontal flip
 
       // Turn on flashlight (LED on GPIO 4)
     pinMode(4, OUTPUT);

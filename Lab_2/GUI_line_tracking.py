@@ -8,10 +8,26 @@ from PyQt5 import uic, QtGui, QtCore
 from PyQt5.QtWidgets import QApplication, QWidget
 from qasync import QEventLoop, asyncSlot
 
-ESP32_WS_URL = "ws://192.168.31.81:81/ws"       # ЗАМІНІТЬ НА СВІЙ
-ESP32_VIDEO_URL = "http://192.168.31.81/video"  # ЗАМІНІТЬ НА СВІЙ
+ESP32_WS_URL = "ws://10.1.66.84:81/ws"       # ЗАМІНІТЬ НА СВІЙ
+ESP32_VIDEO_URL = "http://10.1.66.84/video"  # ЗАМІНІТЬ НА СВІЙ
 
 ANGLE_THRESHOLD = 0.15  # Радіан ~ 8.5 градусів
+
+#============= Налаштування детектора ліній ===================
+
+# Параметри розмиття
+GAUSS_KSIZE = (5, 5)        # Розмір фільтра
+GAUSS_SIGMA_X = 0           # Інтенсивність розмиття вздовж X
+GAUSS_SIGMA_Y = 0           # Інтенсивність розмиття вздовж Y
+
+# Параметри фільтру Canny
+CANNY_THRESHOLD_1 = 45      # Нижній поріг
+CANNY_THRESHOLD_2 = 80      # Верхній поріг
+
+# Параметри методу Хога
+HOUGH_THRESHOLD = 30        # Поріг розпізнавання лінії
+HOUGH_MIN_LINE_LENGTH = 20  # Мінімальна довжина лінії
+HOUGH_MAX_LINE_GAP = 20     # Максимальний розрив лінії
 
 
 class VideoControl(QWidget):
@@ -129,13 +145,18 @@ class VideoControl(QWidget):
         debug_frame = frame.copy()
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        blur = cv2.GaussianBlur(gray, (5, 5), 0)
-        edges = cv2.Canny(blur, 45, 80)
+        blur = cv2.GaussianBlur(gray, ksize=GAUSS_KSIZE, sigmaX=GAUSS_SIGMA_X, sigmaY=GAUSS_SIGMA_Y)
+        edges = cv2.Canny(blur, CANNY_THRESHOLD_1, CANNY_THRESHOLD_2)
 
         height, width = edges.shape
         roi = edges[int(height/2):, :]
 
-        lines = cv2.HoughLinesP(roi, 1, np.pi/180, 30, minLineLength=20, maxLineGap=20)
+        lines = cv2.HoughLinesP(roi,
+                                rho=1,
+                                theta=np.pi/180,
+                                threshold=HOUGH_THRESHOLD,
+                                minLineLength=HOUGH_MIN_LINE_LENGTH,
+                                maxLineGap=HOUGH_MAX_LINE_GAP)
         angle_sum = 0
         count = 0
 

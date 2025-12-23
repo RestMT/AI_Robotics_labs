@@ -174,7 +174,7 @@ bool startCamera() {
   sensor_t *s = esp_camera_sensor_get();
   if (s != nullptr) {
     s->set_vflip(s, 1);
-    s->set_hmirror(s, 1);
+    s->set_hmirror(s, 0);
     pinMode(4, OUTPUT);
     digitalWrite(4, HIGH);
   }
