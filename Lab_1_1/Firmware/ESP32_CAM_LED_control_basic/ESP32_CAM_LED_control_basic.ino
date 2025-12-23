@@ -8,8 +8,8 @@ char buffer[20];
 int bufferIndex = 0;
 bool ledState = false;
 
-const char* ssid = "Name";
-const char* password = "Password";
+const char* ssid = "SSID";
+const char* password = "PASSWORD";
 
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");

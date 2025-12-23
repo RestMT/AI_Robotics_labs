@@ -4,9 +4,6 @@
 #include "esp_camera.h"
 
 // ======= WiFi =======
-//const char* ssid = "S9 WiFi";
-//const char* password = "utes7951";
-
 const char *ssid = "SSID";
 const char *password = "PASSWORD";
 
